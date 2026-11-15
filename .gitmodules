@@ -1,0 +1,16 @@
+[submodule "vendors/daily_stock_analysis"]
+	path = vendors/daily_stock_analysis
+	url = https://github.com/ZhuLinsen/daily_stock_analysis.git
+	branch = main
+[submodule "vendors/qlib"]
+	path = vendors/qlib
+	url = https://github.com/microsoft/qlib.git
+	branch = main
+[submodule "vendors/TradingAgents-CN"]
+	path = vendors/TradingAgents-CN
+	url = https://github.com/hsliuping/TradingAgents-CN.git
+	branch = v3.0
+[submodule "vendors/instock"]
+	path = vendors/instock
+	url = https://github.com/myhhub/stock.git
+	branch = master

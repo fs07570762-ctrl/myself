@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-11-15T20:45:00+08:00",
+  "note": "pinned_sha 由 git ls-remote <url> HEAD 抓取，submodule 固定在该 commit；如需升级，运行 python bootstrap.py --update。star/size 为 2026-11-15 GitHub API 瞬时值。",
+  "compliance_note": "本仓库不复制任何上游源码，只通过 git submodule 记录 commit 引用。TradingAgents-CN 的应用层为专有 source-available 许可，默认不自动初始化，需显式确认。",
+  "projects": [
+    {
+      "id": "dsa_decision_dashboard",
+      "repo": "ZhuLinsen/daily_stock_analysis",
+      "url": "https://github.com/ZhuLinsen/daily_stock_analysis.git",
+      "path": "vendors/daily_stock_analysis",
+      "branch": "main",
+      "pinned_sha": "f044e95f2156d6c53cdeabf4bf27c60df4e366d5",
+      "license": "MIT",
+      "stars": 72376,
+      "size_kb": 121734,
+      "pushed_at": "2026-11-15T08:27:24Z",
+      "auto_init": true,
+      "model": "决策仪表盘四段结构 core_conclusion / data_perspective / intelligence / battle_plan",
+      "deploy_blockers": ["需至少一个 LLM API Key", "依赖 akshare / litellm / pandas 等"]
+    },
+    {
+      "id": "qlib_multifactor",
+      "repo": "microsoft/qlib",
+      "url": "https://github.com/microsoft/qlib.git",
+      "path": "vendors/qlib",
+      "branch": "main",
+      "pinned_sha": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "license": "MIT",
+      "stars": 50294,
+      "size_kb": 18503,
+      "pushed_at": "2026-11-04T22:48:24Z",
+      "auto_init": true,
+      "model": "Alpha158/Alpha360 因子体系、横截面打分、IC / 分组收益 / 回测",
+      "deploy_blockers": ["官方数据集暂时禁用，需社区数据集", "README 支持 Python 3.8–3.12", "需 numpy / pandas / lightgbm / cython"]
+    },
+    {
+      "id": "tradingagents_cn_debate",
+      "repo": "hsliuping/TradingAgents-CN",
+      "url": "https://github.com/hsliuping/TradingAgents-CN.git",
+      "path": "vendors/TradingAgents-CN",
+      "branch": "v3.0",
+      "pinned_sha": "51060a7682cf51810b4bc3a704829438d18cd8dc",
+      "license": "Hybrid (Apache-2.0 核心 + 专有应用层, NOASSERTION)",
+      "stars": 32957,
+      "size_kb": 81364,
+      "pushed_at": "2026-11-14T13:49:42Z",
+      "auto_init": false,
+      "requires_confirmation": true,
+      "license_warning": "app/、frontend/、core/ 为专有 source-available，允许个人使用/评估/教育，禁止再分发与商业使用。使用前请阅读上游 LICENSE；商业用途须联系作者。",
+      "model": "多智能体分工 -> 多空辩论 -> 风控裁决 -> 证伪条件",
+      "deploy_blockers": ["需 Python 3.11 / Node 18+ / MongoDB 7+ / Redis 6+ / LLM API Key", "混合授权限制见 license_warning"]
+    },
+    {
+      "id": "instock_technical_cyq",
+      "repo": "myhhub/stock",
+      "url": "https://github.com/myhhub/stock.git",
+      "path": "vendors/instock",
+      "branch": "master",
+      "pinned_sha": "b6e0ca2268cfbadd02f5ed052159c187b6670231",
+      "license": "Apache-2.0",
+      "stars": 15212,
+      "size_kb": 27582,
+      "pushed_at": "2026-04-02T02:26:35Z",
+      "freshness": "[STALE] 227 天无代码推送（截至 2026-11-15）",
+      "auto_init": true,
+      "model": "32 类技术指标、61 种 K 线形态、筹码分布 CYQ、11 个策略模板、选股回测",
+      "deploy_blockers": ["需 MySQL/MariaDB、TA-Lib C 库、Python 3.11", "东方财富 Cookie 需定期更新", "爬虫接口可能已失效"]
+    }
+  ]
+}

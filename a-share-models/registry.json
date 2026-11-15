@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "a-share-analysis-models",
+  "created_at": "2026-11-15T18:35:00+08:00",
+  "verified_at": "2026-11-15",
+  "verification_sources": [
+    "GitHub REST API /search/repositories (repo: 精确查询，返回 stargazers_count / forks_count / license / pushed_at)",
+    "GitHub REST API /repos/{owner}/{repo}/contents/README.md (一手 README 原文)",
+    "本机环境探测：Python 3.13.14；akshare/pandas/litellm 等缺失（2026-11-15 实测）"
+  ],
+  "caveats": [
+    "star / fork 为 2026-11-15 抓取的瞬时值，会实时变动；同日不同时刻查询可有差异。",
+    "pushed_at 是最后一次代码推送；updated_at 常由 star / issue 变动触发，不代表代码更新。",
+    "以下是『方法论与模型注册表』，四个项目均未在本机 clone 或部署运行。"
+  ],
+  "selection_criteria": {
+    "inclusion": [
+      "项目本身产出股票分析结论 / 选股 / 打分 / 研报结构，而非纯数据接口或纯下单执行",
+      "对 A 股有原生支持证据（代码格式、指数成分、数据源、交易规则、README 明确写明）",
+      "关注度较高：以 GitHub stars 为主序，兼顾 forks"
+    ],
+    "excluded_high_star_examples": [
+      {"repo": "vnpy/vnpy", "stars": 46382, "reason": "定位是量化交易平台开发框架（下单/柜台接入），不产出分析结论"},
+      {"repo": "akfamily/akshare", "stars": 23341, "reason": "财经数据接口库，是数据层不是分析模型"},
+      {"repo": "bbfamily/abu", "stars": 19194, "reason": "量化交易系统，覆盖多市场且偏教程/回测，A 股原生证据弱于入选项目"},
+      {"repo": "waditu/tushare", "stars": 15494, "reason": "A 股数据接口，属数据层"},
+      {"repo": "simonlin1212/a-stock-data", "stars": 11839, "reason": "A 股全栈数据工具包（87 端点），属数据层，可作为未来数据接入备选"}
+    ]
+  },
+  "models": [
+    {
+      "id": "dsa_decision_dashboard",
+      "role": "baseline_output_contract",
+      "project": "ZhuLinsen/daily_stock_analysis",
+      "url": "https://github.com/ZhuLinsen/daily_stock_analysis",
+      "stars": 72357,
+      "forks": 57517,
+      "license": "MIT",
+      "language": "Python",
+      "pushed_at": "2026-11-15T08:27:00Z",
+      "freshness": "OK",
+      "paradigm": "llm_decision_dashboard",
+      "a_share_evidence": [
+        "README 与 SKILL.md 明确支持 A 股代码格式（600519）及多市场",
+        "GitHub topics 含 a-stock"
+      ],
+      "reusable_model": "决策仪表盘四段结构：core_conclusion / data_perspective / intelligence / battle_plan；另有 --market-review 大盘复盘",
+      "callable": {"module": "models.py", "entry": "dsa_dashboard", "runtime": "python3 stdlib"},
+      "applies_to": ["all"],
+      "deploy_blockers": ["需至少一个 LLM API Key", "依赖 akshare / litellm / pandas 等，本机缺失"]
+    },
+    {
+      "id": "qlib_multifactor",
+      "role": "primary_quant_model",
+      "project": "microsoft/qlib",
+      "url": "https://github.com/microsoft/qlib",
+      "stars": 50294,
+      "forks": 7935,
+      "license": "MIT",
+      "language": "Python",
+      "pushed_at": "2026-11-04T22:48:24Z",
+      "freshness": "OK (11d)",
+      "paradigm": "multi_factor_ml",
+      "a_share_evidence": [
+        "README 数据准备章节：python scripts/get_data.py qlib_data --target_dir ~/.qlib/qlib_data/cn_data --region cn",
+        "示例代码出现 REG_CN、csi500（中证 500 成分）、SH600000（上交所代码格式）",
+        "Quant Dataset Zoo 表格：Alpha158 / Alpha360 在 China Market 列均为 √"
+      ],
+      "reusable_model": "Alpha158/Alpha360 因子体系 + 横截面因子标准化与加权打分 + IC / 分组收益 / 回测评估范式；内置 LightGBM、LSTM、Transformer、HIST、DoubleEnsemble 等 20+ 模型",
+      "callable": {"module": "models.py", "entry": "qlib_factor_score", "runtime": "python3 stdlib"},
+      "applies_to": ["screen", "sector_pick", "factor_rank", "backtest_design"],
+      "deploy_blockers": [
+        "README 明示官方数据集因数据安全策略暂时禁用，需改用社区 chenditc/investment_data 的 qlib_bin.tar.gz",
+        "官方 cn 数据由 Yahoo Finance 爬取，README 自述 'data might not be perfect'",
+        "README 支持 Python 3.8–3.12；本机为 3.13.14，存在兼容风险",
+        "需 numpy / pandas / lightgbm / cython 等，本机缺失"
+      ],
+      "key_risk": "A 股涨跌停、停牌、ST、复权口径若未在数据层正确处理，因子与回测会产生系统性偏差"
+    },
+    {
+      "id": "tradingagents_cn_debate",
+      "role": "qualitative_adversarial_model",
+      "project": "hsliuping/TradingAgents-CN",
+      "url": "https://github.com/hsliuping/TradingAgents-CN",
+      "stars": 32957,
+      "forks": 6856,
+      "license": "Hybrid (Apache-2.0 核心 + 专有应用层, NOASSERTION)",
+      "language": "Python / Vue 3",
+      "default_branch": "v3.0",
+      "pushed_at": "2026-11-14T13:49:42Z",
+      "freshness": "OK (1d)",
+      "paradigm": "multi_agent_llm_debate",
+      "a_share_evidence": [
+        "README 首句：multi-agent stock research assistant for the Chinese A-share market",
+        "免责声明明确『本系统仅支持 A 股市场研究』",
+        "数据来源 Tushare / AKShare / BaoStock；支持从 6000+ 只股票自然语言选股"
+      ],
+      "reusable_model": "多智能体角色分工（大盘/板块/市场/基本面/新闻分析师 + 乐观/审慎研究员）→ 多空辩论 → 风控裁决 → 研究结论；5 级研究深度",
+      "callable": {"module": "models.py", "entry": "multiagent_debate", "runtime": "python3 stdlib"},
+      "applies_to": ["deep_dive", "thesis_check", "event", "earnings"],
+      "deploy_blockers": [
+        "需 Python 3.11、Node 18+、MongoDB 7+、Redis 6+、LLM API Key",
+        "混合授权：app/ / frontend/ / core/ 为 source-available，禁止再分发与商业使用",
+        "README 明确不提供目标价、止损止盈、买卖时机"
+      ],
+      "key_risk": "LLM 生成内容存在幻觉；多智能体辩论若共享同一错误数据，会放大而非纠正偏差"
+    },
+    {
+      "id": "instock_technical_cyq",
+      "role": "technical_chip_model",
+      "project": "myhhub/stock",
+      "url": "https://github.com/myhhub/stock",
+      "stars": 15212,
+      "forks": 3113,
+      "license": "Apache-2.0",
+      "language": "Python",
+      "pushed_at": "2026-04-02T02:26:35Z",
+      "freshness": "[STALE] 227 天无代码推送",
+      "paradigm": "technical_pattern_chip",
+      "a_share_evidence": [
+        "README 明确『抓取A股票每日数据』，含沪深股通、龙虎榜、涨停原因揭密、每日 ETF 数据",
+        "综合选股 200+ 字段含 MACD/KDJ 金叉、低位资金净流入、均线多头排列等 A 股常用条件",
+        "筹码分布 CYQ 缺省按 210 个交易日计算成本，宣称与东方财富口径一致",
+        "内置 11 个选股策略，含基本面筛选 PE<=20 且 >0、PB<=10、ROE>=15",
+        "指标按同花顺/通达信口径校准，识别 61 种 K 线形态"
+      ],
+      "reusable_model": "32 类技术指标 + 61 种 K 线形态 + 筹码分布 + 11 个策略模板 + 选股回测验证",
+      "callable": {"module": "models.py", "entry": "technical_signals / chip_distribution", "runtime": "python3 stdlib"},
+      "applies_to": ["technical", "timing_check", "screen", "chip_analysis"],
+      "deploy_blockers": [
+        "需 MySQL/MariaDB、TA-Lib C 库、Python 3.11 及一批爬虫依赖；东方财富 Cookie 需定期更新",
+        "README 含第三方商业控件评估版与第三方软件破解链接，部署时不应照做（合规瑕疵）",
+        "代码 227 天未更新；A 股爬虫类项目接口易失效，实际跑通风险高"
+      ],
+      "key_risk": "[STALE] 技术面模型可复用，但不要直接依赖其数据抓取层；仅作方法论来源"
+    }
+  ],
+  "active_alternatives": [
+    {
+      "project": "shy3130/tick-stock-panel",
+      "url": "https://github.com/shy3130/tick-stock-panel",
+      "stars": 7809,
+      "license": "MIT",
+      "pushed_at": "2026-11-12T16:42:48Z",
+      "note": "A 股『自建策略 + 监控 + 回测』工作台，3 天前有推送。若要求代码活跃，可替换 myhhub/stock 的技术面模型；代价是关注度约为其一半。"
+    },
+    {
+      "project": "sngyai/Sequoia-X",
+      "url": "https://github.com/sngyai/Sequoia-X",
+      "stars": 8655,
+      "note": "A 股自动选股系统，技术形态扫描 + 收盘后飞书推送，akshare/baostock 数据源。"
+    },
+    {
+      "project": "wbh604/UZI-Skill",
+      "url": "https://github.com/wbh604/UZI-Skill",
+      "stars": 7625,
+      "note": "Skill 形态的 A 股分析规则集（22 维数据 / 180 条量化规则 / 17 种机构方法），偏游资短线情绪，与本注册表偏基本面+质量的价值框架不完全一致，故未入选。"
+    }
+  ],
+  "routing": {
+    "screen": ["qlib_multifactor", "instock_technical_cyq", "dsa_decision_dashboard"],
+    "sector_pick": ["qlib_multifactor", "dsa_decision_dashboard", "tradingagents_cn_debate"],
+    "deep_dive": ["tradingagents_cn_debate", "qlib_multifactor", "instock_technical_cyq", "dsa_decision_dashboard"],
+    "technical": ["instock_technical_cyq", "dsa_decision_dashboard"],
+    "market_review": ["dsa_decision_dashboard", "instock_technical_cyq"],
+    "earnings": ["tradingagents_cn_debate", "qlib_multifactor", "dsa_decision_dashboard"],
+    "event": ["tradingagents_cn_debate", "dsa_decision_dashboard"],
+    "portfolio_risk": ["qlib_multifactor", "dsa_decision_dashboard"]
+  },
+  "output_contract": {
+    "data_routes": ["domain_search（本会话无金融行情 MCP 时的默认取数层）", "已连接的金融类 MCP / 数据连接器", "用户提供的文件或数据", "本机部署后由 akshare / baostock / tushare 提供"],
+    "mandatory_tags": {
+      "[MISSING]": "未查证到的数据，禁止估算或编造",
+      "[STALE]": "超过 90 天的行情/财务/代码状态",
+      "类型标注": "每个主张标注 事实 / 管理层声明 / 市场共识 / 模型输出 / 假设 / 判断"
+    },
+    "required_sections": ["数据来源与基准日", "模型与假设（权重、因子方向、窗口）", "结论与评级", "多空双方论点", "证伪条件与监控项", "PM 七问", "边界与免责声明"],
+    "prohibited_without_inputs": ["无 DCF / 可比估值支撑的目标价", "无风险偏好与持仓前提的仓位比例与买卖指令", "把模型评分冒充投资评级"],
+    "disclaimer": "本报告仅供研究参考，不构成个人投资建议。市场有风险，投资需谨慎；过往表现不预示未来收益。"
+  },
+  "local_deployment_status": {
+    "cloned": false,
+    "installed_dependencies": false,
+    "python": "models.py 兼容 Python 3.8+；首次验证环境为 3.13.14",
+    "note": "注册表调用的是『方法论等价的轻量模型实现』(models.py)，不依赖任何第三方库；四个上游项目源码均以 git submodule 引用，不需安装即可调用。若未来要跑原生模型，须先解决各项目 deploy_blockers。",
+    "repository_note": "本文件已同步到 fs07570762-ctrl/myself 仓库的 a-share-models/ 目录；上游 commit 固定见同目录 projects.json 的 pinned_sha。"
+  }
+}
