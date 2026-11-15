@@ -14,3 +14,19 @@
 	path = vendors/instock
 	url = https://github.com/myhhub/stock.git
 	branch = master
+[submodule "vendors/CNEquity"]
+	path = vendors/CNEquity
+	url = https://github.com/rootSunc/CNEquity.git
+	branch = main
+[submodule "vendors/TradingAgents-astock"]
+	path = vendors/TradingAgents-astock
+	url = https://github.com/simonlin1212/TradingAgents-astock.git
+	branch = main
+[submodule "vendors/aiagents-stock"]
+	path = vendors/aiagents-stock
+	url = https://github.com/oficcejo/aiagents-stock.git
+	branch = main
+[submodule "vendors/FinGPT"]
+	path = vendors/FinGPT
+	url = https://github.com/AI4Finance-Foundation/FinGPT.git
+	branch = master

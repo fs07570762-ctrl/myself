@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "registry_id": "a-share-analysis-models",
   "created_at": "2026-11-15T18:35:00+08:00",
-  "verified_at": "2026-11-15",
+  "verified_at": "2026-11-16",
   "verification_sources": [
     "GitHub REST API /search/repositories (repo: 精确查询，返回 stargazers_count / forks_count / license / pushed_at)",
     "GitHub REST API /repos/{owner}/{repo}/contents/README.md (一手 README 原文)",
@@ -11,7 +11,8 @@
   "caveats": [
     "star / fork 为 2026-11-15 抓取的瞬时值，会实时变动；同日不同时刻查询可有差异。",
     "pushed_at 是最后一次代码推送；updated_at 常由 star / issue 变动触发，不代表代码更新。",
-    "以下是『方法论与模型注册表』，四个项目均未在本机 clone 或部署运行。"
+    "以下是『方法论与模型注册表』，八个项目均未在本机 clone 或部署运行。",
+    "2026-11-16 新增四个增强模型（CNEquity / TradingAgents-astock / aiagents-stock / FinGPT），方向：市场消息捕捉与量化资金走向；元数据为 2026-11-16 GitHub API 瞬时值。"
   ],
   "selection_criteria": {
     "inclusion": [
@@ -133,6 +134,101 @@
         "代码 227 天未更新；A 股爬虫类项目接口易失效，实际跑通风险高"
       ],
       "key_risk": "[STALE] 技术面模型可复用，但不要直接依赖其数据抓取层；仅作方法论来源"
+    },
+    {
+      "id": "cnequity_moneyflow",
+      "role": "moneyflow_data_methodology",
+      "project": "rootSunc/CNEquity",
+      "url": "https://github.com/rootSunc/CNEquity",
+      "stars": 1038,
+      "forks": 116,
+      "license": "Apache-2.0",
+      "language": "Python",
+      "pushed_at": "2026-11-13T21:03:53Z",
+      "freshness": "OK (3d)",
+      "paradigm": "layered_dataset_mcp",
+      "a_share_evidence": [
+        "86 个日更 A 股数据集，分层设计：L4 资金面（北向/两融/龙虎榜/大宗交易/资金流向）+ L7 舆情（新闻/快讯/情绪/人气）+ L2 公告索引",
+        "MCP Server 原生实现，可直接接入 WorkBuddy MCP 体系",
+        "README 明确面向 A 股全市场日更"
+      ],
+      "reusable_model": "资金面分层框架：把『北向/两融/龙虎榜/大宗/主力流向』视为五个相互独立又可交叉验证的资金维度，任何资金结论须至少两维印证；舆情七要素（来源/时点/情感/热度/传播/关联标的/一致性）",
+      "callable": {"module": "models.py", "entry": "capital_flow_tracker", "runtime": "python3 stdlib"},
+      "applies_to": ["money_flow", "dragon_tiger", "news_capture", "market_review", "screen"],
+      "deploy_blockers": ["MCP 原生部署需 Node 环境与数据集日更任务", "数据落地约 60MB/日的存储规划"],
+      "key_risk": "数据集日更链路若断更，资金结论会基于陈旧数据；调用前必须核对数据基准日"
+    },
+    {
+      "id": "tradingagents_astock_sentiment",
+      "role": "a_share_specialized_agents",
+      "project": "simonlin1212/TradingAgents-astock",
+      "url": "https://github.com/simonlin1212/TradingAgents-astock",
+      "stars": 3986,
+      "forks": 995,
+      "license": "Apache-2.0",
+      "language": "Python",
+      "pushed_at": "2026-10-30T23:03:45Z",
+      "freshness": "OK (17d)",
+      "paradigm": "multi_agent_llm_a_share",
+      "a_share_evidence": [
+        "TradingAgents 的 A 股原生分支：新增游资追踪师 / 政策分析师 / 解禁监控师三个 A 股特化角色",
+        "数据源全免费直连：财联社快讯、百度股市通资金流、东财防封节流工程",
+        "内置决策绩效统计（回测自己的历史建议胜率）"
+      ],
+      "reusable_model": "A 股特化多智能体：游资席位行为画像（知名席位胜率/溢价追踪）+ 政策事件分级（国常会/部委/地方）+ 解禁减持日历监控；比 TradingAgents-CN 许可更干净（全 Apache-2.0）",
+      "callable": {"module": "models.py", "entry": "hotmoney_profile", "runtime": "python3 stdlib"},
+      "applies_to": ["money_flow", "dragon_tiger", "event", "news_capture", "deep_dive"],
+      "deploy_blockers": ["需 LLM API Key", "东财/财联社接口存在限流，需节流"],
+      "key_risk": "游资席位画像基于公开龙虎榜，上榜有滞后（T+1 晚间），不能当作实时信号"
+    },
+    {
+      "id": "aiagents_stock_news",
+      "role": "news_flow_monitor_methodology",
+      "project": "oficcejo/aiagents-stock",
+      "url": "https://github.com/oficcejo/aiagents-stock",
+      "stars": 2089,
+      "forks": 602,
+      "license": "NO LICENSE (默认版权，仅复用方法论，禁止复制/再分发其代码)",
+      "language": "Python",
+      "pushed_at": "2026-10-10T10:42:49Z",
+      "freshness": "OK (37d)",
+      "paradigm": "multi_source_news_aggregation",
+      "a_share_evidence": [
+        "20 个平台新闻流量监测聚合（财经门户/快讯/社区热度）",
+        "智瞰龙虎：龙虎榜数据 × 5 个 AI 分析师角色交叉解读",
+        "主力选股模块基于资金净流入排序"
+      ],
+      "reusable_model": "消息捕捉三层漏斗：①全源聚合（20 平台）→ ②去重与热度排序 → ③AI 角色交叉解读（同一条消息由不同立场的分析师独立判断再汇总）；龙虎榜五视角（买方结构/卖方结构/席位历史/题材联动/次日概率）",
+      "callable": {"module": "models.py", "entry": "news_sentiment_score", "runtime": "python3 stdlib"},
+      "applies_to": ["news_capture", "dragon_tiger", "market_review"],
+      "deploy_blockers": [
+        "无开源许可证：只能学习方法论，不能复制代码",
+        "问财 cookie / Playwright 绕指纹属灰色地带，本体系禁用该数据通道",
+        "README 自带仓位建议话术，输出边界比本体系宽松，调用其方法论时必须叠加本体系的合规护栏"
+      ],
+      "key_risk": "聚合源越多噪声越大；热度≠可靠性，传闻必须标注『未证实』"
+    },
+    {
+      "id": "fingpt_sentiment",
+      "role": "fin_news_sentiment_methodology",
+      "project": "AI4Finance-Foundation/FinGPT",
+      "url": "https://github.com/AI4Finance-Foundation/FinGPT",
+      "stars": 21578,
+      "forks": 3057,
+      "license": "MIT",
+      "language": "Python",
+      "pushed_at": "2026-10-25T13:49:15Z",
+      "freshness": "OK (22d)",
+      "paradigm": "fin_llm_sentiment",
+      "a_share_evidence": [
+        "FinGPT V1 专为中国市场微调（中文金融新闻情绪）",
+        "v3.3 在中文金融情绪任务 F1 0.882，为公开基准 SOTA 梯队"
+      ],
+      "reusable_model": "金融新闻情绪分析管道：新闻→情绪三分类（利多/利空/中性）→按来源与时效加权→聚合为标的级情绪分；方法论等价实现见 models.py news_sentiment_score（规则版），有 GPU 环境后可替换为原生 LoRA 微调模型",
+      "callable": {"module": "models.py", "entry": "news_sentiment_score", "runtime": "python3 stdlib"},
+      "applies_to": ["news_capture", "event", "deep_dive"],
+      "deploy_blockers": ["原生模型需 GPU（本机无独显，i7-4770/8GB）", "LoRA 微调需训练数据准备"],
+      "key_risk": "情绪分是『市场怎么说』而非『事实是什么』；情绪极值常是反向指标，须与资金流交叉验证"
     }
   ],
   "active_alternatives": [
@@ -162,10 +258,18 @@
     "sector_pick": ["qlib_multifactor", "dsa_decision_dashboard", "tradingagents_cn_debate"],
     "deep_dive": ["tradingagents_cn_debate", "qlib_multifactor", "instock_technical_cyq", "dsa_decision_dashboard"],
     "technical": ["instock_technical_cyq", "dsa_decision_dashboard"],
-    "market_review": ["dsa_decision_dashboard", "instock_technical_cyq"],
+    "market_review": ["dsa_decision_dashboard", "instock_technical_cyq", "cnequity_moneyflow", "aiagents_stock_news"],
     "earnings": ["tradingagents_cn_debate", "qlib_multifactor", "dsa_decision_dashboard"],
-    "event": ["tradingagents_cn_debate", "dsa_decision_dashboard"],
-    "portfolio_risk": ["qlib_multifactor", "dsa_decision_dashboard"]
+    "event": ["tradingagents_cn_debate", "tradingagents_astock_sentiment", "dsa_decision_dashboard", "fingpt_sentiment"],
+    "portfolio_risk": ["qlib_multifactor", "dsa_decision_dashboard"],
+    "money_flow": ["cnequity_moneyflow", "tradingagents_astock_sentiment", "dsa_decision_dashboard"],
+    "dragon_tiger": ["cnequity_moneyflow", "aiagents_stock_news", "tradingagents_astock_sentiment"],
+    "news_capture": ["aiagents_stock_news", "fingpt_sentiment", "cnequity_moneyflow", "tradingagents_astock_sentiment"]
+  },
+  "routing_notes": {
+    "money_flow": "资金走向类任务：先 cnequity 五维框架（北向/两融/龙虎榜/大宗/主力流向）定结构，再用 astock 游资席位画像补充行为解释，结论须至少两个维度印证",
+    "news_capture": "市场消息捕捉：aiagents 三层漏斗做广度，fingpt 方法论做情绪打分，cnequity 舆情七要素做单条消息质检；传闻必须标『未证实』",
+    "dragon_tiger": "龙虎榜：T+1 滞后数据，只能用于复盘与席位画像，禁止当作实时买卖信号"
   },
   "output_contract": {
     "data_routes": ["domain_search（本会话无金融行情 MCP 时的默认取数层）", "已连接的金融类 MCP / 数据连接器", "用户提供的文件或数据", "本机部署后由 akshare / baostock / tushare 提供"],
@@ -182,7 +286,7 @@
     "cloned": false,
     "installed_dependencies": false,
     "python": "models.py 兼容 Python 3.8+；首次验证环境为 3.13.14",
-    "note": "注册表调用的是『方法论等价的轻量模型实现』(models.py)，不依赖任何第三方库；四个上游项目源码均以 git submodule 引用，不需安装即可调用。若未来要跑原生模型，须先解决各项目 deploy_blockers。",
+    "note": "注册表调用的是『方法论等价的轻量模型实现』(models.py)，不依赖任何第三方库；八个上游项目源码均以 git submodule 引用，不需安装即可调用。若未来要跑原生模型，须先解决各项目 deploy_blockers。",
     "repository_note": "本文件已同步到 fs07570762-ctrl/myself 仓库的 a-share-models/ 目录；上游 commit 固定见同目录 projects.json 的 pinned_sha。"
   }
 }

@@ -9,6 +9,11 @@ A 股分析模型注册表 —— 可执行模型层（方法论等价的轻量�
                                    chip_distribution()      筹码分布近似
   - hsliuping/TradingAgents-CN   -> multiagent_debate()     多空辩论与证伪框架
   - ZhuLinsen/daily_stock_analysis -> dsa_dashboard()       决策仪表盘四段输出契约
+  - rootSunc/CNEquity            -> capital_flow_tracker()  五维资金面交叉验证
+  - AI4Finance-Foundation/FinGPT -> news_sentiment_score()  金融新闻情绪打分（规则版）
+  - oficcejo/aiagents-stock      -> news_sentiment_score()  消息三层漏斗（聚合->去重->多角色解读）
+                                   dragon_tiger_review()   龙虎榜五视角复盘
+  - simonlin1212/TradingAgents-astock -> hotmoney_profile() 游资席位行为画像
 
 重要边界：
   1. 本模块只做「计算与结构化」，不取数、不预测、不生成行情或财务数字。
@@ -419,6 +424,242 @@ def portfolio_risk(holdings):
 
 
 # ---------------------------------------------------------------------------
+# 市场消息捕捉与资金走向（2026-11-16 新增四个上游项目的方法论等价实现）
+# ---------------------------------------------------------------------------
+
+# 情绪词典：规则版 FinGPT 方法论。键为词，值为 (方向, 强度)。
+# 仅作演示级默认词典；实战中调用方可按板块语料扩展，扩展后必须在报告中披露。
+_POS_WORDS = {
+    "涨停": 2, "大涨": 2, "新高": 2, "超预期": 2, "中标": 2, "获批": 2,
+    "增长": 1, "利好": 1, "回升": 1, "回暖": 1, "突破": 1, "放量": 1,
+    "净流入": 1, "增持": 1, "回购": 1, "分红": 1, "订单": 1, "扩产": 1,
+}
+_NEG_WORDS = {
+    "跌停": 2, "大跌": 2, "新低": 2, "暴雷": 2, "立案": 2, "处罚": 2,
+    "减持": 1, "下滑": 1, "亏损": 1, "利空": 1, "退市": 2, "质押": 1,
+    "净流出": 1, "解禁": 1, "商誉": 1, "问询": 1, "警示": 1, "违约": 2,
+}
+_RUMOR_WORDS = ("传闻", "网传", "据说", "或", "疑似", "未证实", "小作文", "消息称")
+
+# 来源可靠性先验权重（研究设定，可在调用时覆盖）
+_SOURCE_WEIGHT = {
+    "交易所公告": 1.0, "证监会": 1.0, "公司公告": 1.0,
+    "证券时报": 0.9, "财联社": 0.9, "上证报": 0.9, "中证报": 0.9,
+    "第一财经": 0.85, "界面": 0.8, "澎湃": 0.8,
+    "自媒体": 0.4, "论坛": 0.3, "群聊截图": 0.1,
+}
+
+
+def _recency_weight(hours_old):
+    """时效权重：0-2h=1.0，之后每 12h 减半；None 视为陈旧 0.2。"""
+    if hours_old is None:
+        return 0.2
+    if hours_old <= 2:
+        return 1.0
+    return max(0.05, 0.5 ** ((hours_old - 2) / 12.0))
+
+
+def news_sentiment_score(news_items, source_weight=None, target=None):
+    """金融新闻情绪打分（FinGPT 管道 + aiagents-stock 三层漏斗的规则版）。
+
+    news_items: [{"title": str, "source": str, "hours_old": float|None,
+                  "heat": float|None, "related": [code,...]}, ...]
+    返回：标的/全市场情绪分 (-100~+100)、逐条判定、传闻清单、漏斗统计。
+    """
+    if not news_items:
+        return {"error": "empty news", "model_output": True}
+    sw = dict(_SOURCE_WEIGHT)
+    if source_weight:
+        sw.update(source_weight)
+
+    # 漏斗第一层：去重（标题前 12 字指纹）
+    seen, dedup = set(), []
+    for it in news_items:
+        fp = (it.get("title") or "")[:12]
+        if fp and fp in seen:
+            continue
+        seen.add(fp)
+        dedup.append(it)
+
+    judged, rumors = [], []
+    for it in dedup:
+        title = it.get("title") or ""
+        pos = sum(w for k, w in _POS_WORDS.items() if k in title)
+        neg = sum(w for k, w in _NEG_WORDS.items() if k in title)
+        rumor = any(k in title for k in _RUMOR_WORDS)
+        if rumor:
+            rumors.append(title)
+        raw = pos - neg
+        label = "利多" if raw > 0 else ("利空" if raw < 0 else "中性")
+        w_src = sw.get(it.get("source"), 0.5)
+        w_time = _recency_weight(it.get("hours_old"))
+        heat = max(0.1, min(1.0, (it.get("heat") or 0.5)))
+        weight = w_src * w_time * (0.5 + 0.5 * heat)
+        if rumor:
+            weight *= 0.3  # 传闻降权
+        judged.append({
+            "title": title, "source": it.get("source", "[MISSING]"),
+            "label": label, "strength": abs(raw), "weight": round(weight, 3),
+            "rumor": rumor, "related": it.get("related") or [],
+        })
+
+    if target:
+        pool = [j for j in judged if target in (j["related"] or [])]
+    else:
+        pool = judged
+    num = sum((1 if j["label"] == "利多" else -1 if j["label"] == "利空" else 0) * j["weight"]
+              for j in pool)
+    den = sum(j["weight"] for j in pool) or 1e-9
+    score = round(100 * num / den, 2)
+
+    return {
+        "model": "fingpt_sentiment + aiagents_stock_news", "model_output": True,
+        "target": target or "全市场聚合",
+        "sentiment_score": score,
+        "sentiment_label": ("偏多" if score > 20 else "偏空" if score < -20 else "中性"),
+        "n_input": len(news_items), "n_after_dedup": len(dedup),
+        "n_rumor": len(rumors), "rumor_titles": rumors,
+        "items": judged,
+        "assumptions": [
+            "规则版词典打分，非 FinGPT 原生 LoRA 模型（本机无 GPU）；正负词命中做加权计数",
+            "权重 = 来源可靠性 x 时效衰减 x 热度归一；传闻再乘 0.3 降权",
+            "情绪分只代表『市场怎么说』，不代表事实本身；禁止单独作为买卖依据",
+        ],
+        "guardrails": [
+            "传闻/小作文一律标『未证实』，须在报告中与事实分开陈列",
+            "情绪极值（|score|>70）常是反向指标，必须与资金流交叉验证",
+        ],
+        "source_project": "AI4Finance-Foundation/FinGPT + oficcejo/aiagents-stock（方法论，非原生实现）",
+    }
+
+
+def capital_flow_tracker(flows):
+    """CNEquity L4 五维资金面交叉验证。
+
+    flows: {"northbound": 亿元(净买入，可负), "margin": 亿元(两融净买入),
+            "dragon_tiger": 亿元(龙虎榜净买入), "block_trade": 亿元(大宗净额),
+            "main_force": 亿元(主力净流入), "as_of": "YYYY-MM-DD"}  缺维度给 None。
+    返回：方向一致性、印证维度数、结论强度。任一维缺失标 [MISSING]。
+    """
+    dims = ["northbound", "margin", "dragon_tiger", "block_trade", "main_force"]
+    dim_cn = {"northbound": "北向资金", "margin": "两融净买入", "dragon_tiger": "龙虎榜净买入",
+              "block_trade": "大宗交易净额", "main_force": "主力净流入"}
+    vals, missing = {}, []
+    for d in dims:
+        v = flows.get(d)
+        if v is None:
+            missing.append(d)
+        else:
+            vals[d] = v
+
+    as_of = flows.get("as_of", "[MISSING]")
+    if len(vals) < 2:
+        return {"model": "cnequity_moneyflow", "model_output": True,
+                "as_of": as_of,
+                "error": "可用维度不足 2 个，无法交叉验证",
+                "missing": [dim_cn[d] for d in missing]}
+
+    signs = {d: (1 if v > 0 else -1 if v < 0 else 0) for d, v in vals.items()}
+    net = sum(signs.values())
+    agree = sum(1 for s in signs.values() if s == (1 if net > 0 else -1 if net < 0 else 0))
+    verdict = ("资金共振流入" if net > 0 else "资金共振流出") if abs(net) == len(signs) else \
+              ("多数维度流入" if net > 0 else "多数维度流出" if net < 0 else "方向分歧")
+    strength = "强" if agree >= 4 else ("中" if agree == 3 else "弱（分歧）")
+
+    return {
+        "model": "cnequity_moneyflow", "model_output": True,
+        "as_of": as_of,
+        "dimensions": {dim_cn[d]: {"value_亿": vals[d],
+                                   "direction": ("流入" if signs[d] > 0 else "流出" if signs[d] < 0 else "持平")}
+                       for d in vals},
+        "missing_dims": [dim_cn[d] for d in missing],
+        "verdict": verdict, "agree_dims": agree, "n_dims": len(vals),
+        "conclusion_strength": strength,
+        "assumptions": [
+            "方向只按净额正负判断，未做金额量级归一（各维度体量差异大，不可直接相加）",
+            "各维度数据口径不同（北向为港交所、两融为交易所、主力流向多为数据商口径），禁止混算总额",
+            "数据基准日必须一致；跨日拼接的资金面结论无效",
+        ],
+        "guardrails": ["结论强度为弱（分歧）时，禁止输出方向性资金结论，只陈列事实"],
+        "source_project": "rootSunc/CNEquity（L4 资金面分层框架，非原生实现）",
+    }
+
+
+def dragon_tiger_review(record):
+    """龙虎榜五视角复盘框架（aiagents-stock 智瞰龙虎方法论）。
+
+    record: {"code","name","date","buy_seats":[{"name","amount"}], 
+             "sell_seats":[{"name","amount"}], "reason": 上榜原因}
+    只输出结构化视角与必须回答的问题，席位解读须由调用方填真实数据。
+    """
+    r = record or {}
+    buys = r.get("buy_seats") or []
+    sells = r.get("sell_seats") or []
+    buy_amt = sum(s.get("amount", 0) for s in buys)
+    sell_amt = sum(s.get("amount", 0) for s in sells)
+    return {
+        "model": "aiagents_stock_news (智瞰龙虎)", "model_output": True,
+        "code": r.get("code", "[MISSING]"), "name": r.get("name", "[MISSING]"),
+        "date": r.get("date", "[MISSING]"),
+        "reason": r.get("reason", "[MISSING]"),
+        "buy_total_亿": round(buy_amt, 2), "sell_total_亿": round(sell_amt, 2),
+        "net_亿": round(buy_amt - sell_amt, 2),
+        "five_views": {
+            "买方结构": "一线游资/量化/机构/拉萨席位的占比与集中度（前 1 席占比 >50% 为独食，警惕）",
+            "卖方结构": "卖出席位是获利了结还是割肉离场，对照成本区",
+            "席位历史": "上榜席位近 60 日历史胜率与次日平均溢价（须真实统计，禁止凭印象）",
+            "题材联动": "同板块当日是否多股同上榜（联动=板块级行情，孤立=个股行为）",
+            "次日概率": "基于历史同类榜单结构的统计概率，仅作参考，非买卖信号",
+        },
+        "guardrails": [
+            "龙虎榜为 T+1 晚间披露数据，只能用于复盘与席位画像，禁止当作实时信号",
+            "单一席位买入不构成推荐依据；独食榜次日冲高回落概率高，须提示风险",
+        ],
+        "source_project": "oficcejo/aiagents-stock（智瞰龙虎五视角方法论，无许可证仅复用思想）",
+    }
+
+
+def hotmoney_profile(seats):
+    """游资席位行为画像（TradingAgents-astock 游资追踪师方法论）。
+
+    seats: [{"name","appearances": 上榜次数, "win_rate": 历史胜率(0-1),
+             "avg_premium_next": 次日平均溢价(%), "style": 风格备注}, ...]
+    返回：席位分层（龙头游资/跟风/量化）与可信度标记。
+    """
+    if not seats:
+        return {"error": "empty seats", "model_output": True}
+    out = []
+    for s in seats:
+        n = s.get("appearances", 0)
+        wr = s.get("win_rate")
+        prem = s.get("avg_premium_next")
+        if n < 5:
+            tier = "样本不足"
+        elif wr is not None and prem is not None and wr >= 0.55 and prem > 0:
+            tier = "高胜率席位"
+        elif wr is not None and wr < 0.4:
+            tier = "反向指标席位"
+        else:
+            tier = "普通席位"
+        out.append({
+            "name": s.get("name", "[MISSING]"), "appearances": n,
+            "win_rate": wr, "avg_premium_next": prem,
+            "tier": tier, "style": s.get("style", ""),
+        })
+    out.sort(key=lambda x: (x["tier"] != "高胜率席位", -(x["win_rate"] or 0)))
+    return {
+        "model": "tradingagents_astock_sentiment", "model_output": True,
+        "seats": out,
+        "assumptions": [
+            "分层阈值（上榜>=5 次、胜率 55%/40%）为研究设定，非统计检验结果",
+            "胜率与溢价必须由调用方从真实龙虎榜历史数据统计，禁止凭印象填写",
+        ],
+        "guardrails": ["席位画像用于解释资金行为，不构成对个股的推荐"],
+        "source_project": "simonlin1212/TradingAgents-astock（游资追踪师方法论）",
+    }
+
+
+# ---------------------------------------------------------------------------
 # 自动路由与统一入口
 # ---------------------------------------------------------------------------
 
@@ -440,6 +681,8 @@ def analyze(task, payload=None):
     """统一入口：按任务类型自动调用相关模型。
 
     payload 可含：stocks（候选池）、bars（单只 OHLCV）、holdings（组合）、
+                  news（新闻列表）、flows（五维资金）、lhb（龙虎榜记录）、
+                  seats（游资席位）、target（标的代码）、
                   bull_case / bear_case / falsifiers / dashboard 各段。
     """
     p = payload or {}
@@ -460,6 +703,24 @@ def analyze(task, payload=None):
             called.append(mid)
         elif mid == "dsa_decision_dashboard":
             results[mid] = dsa_dashboard(p.get("dashboard"))
+            called.append(mid)
+        elif mid == "cnequity_moneyflow" and p.get("flows"):
+            results[mid] = capital_flow_tracker(p["flows"])
+            called.append(mid)
+        elif mid == "fingpt_sentiment" and p.get("news"):
+            results[mid] = news_sentiment_score(p["news"], target=p.get("target"))
+            called.append(mid)
+        elif mid == "aiagents_stock_news":
+            sub = {}
+            if p.get("news"):
+                sub["news_funnel"] = news_sentiment_score(p["news"], target=p.get("target"))
+            if p.get("lhb"):
+                sub["dragon_tiger"] = dragon_tiger_review(p["lhb"])
+            if sub:
+                results[mid] = sub
+                called.append(mid)
+        elif mid == "tradingagents_astock_sentiment" and p.get("seats"):
+            results[mid] = hotmoney_profile(p["seats"])
             called.append(mid)
     if p.get("holdings"):
         results["portfolio_risk"] = portfolio_risk(p["holdings"])
@@ -507,6 +768,32 @@ def selftest():
     cyq = chip_distribution(bars)
     print("cyq profit_ratio:", cyq["profit_ratio_pct"], "avg_cost:", cyq["avg_cost"])
     print("route(sector_pick):", route("sector_pick")["models"])
+    # 2026-11-16 新增：消息捕捉与资金走向模型自检
+    news = [
+        {"title": "某公司中标大额订单，业绩超预期", "source": "财联社", "hours_old": 1,
+         "heat": 0.9, "related": ["A"]},
+        {"title": "传闻某板块将出大利好（未证实）", "source": "论坛", "hours_old": 3,
+         "heat": 0.8, "related": ["B"]},
+        {"title": "某公司大股东减持，净利润下滑", "source": "公司公告", "hours_old": 20,
+         "heat": 0.6, "related": ["A"]},
+    ]
+    ns = news_sentiment_score(news, target="A")
+    print("news_sentiment(A):", ns["sentiment_score"], ns["sentiment_label"], "rumors:", ns["n_rumor"])
+    flows = {"northbound": 32.5, "margin": 18.2, "dragon_tiger": 3.1,
+             "block_trade": None, "main_force": 45.6, "as_of": "2026-11-16"}
+    cf = capital_flow_tracker(flows)
+    print("capital_flow:", cf["verdict"], "agree:", f"{cf['agree_dims']}/{cf['n_dims']}",
+          "missing:", cf["missing_dims"])
+    lhb = dragon_tiger_review({"code": "A", "name": "合成甲", "date": "2026-11-16",
+                               "buy_seats": [{"name": "某席位", "amount": 1.2}],
+                               "sell_seats": [{"name": "某席位", "amount": 0.8}],
+                               "reason": "日涨幅偏离值达7%"})
+    print("lhb net(亿):", lhb["net_亿"])
+    seats = hotmoney_profile([{"name": "合成席位", "appearances": 12,
+                               "win_rate": 0.6, "avg_premium_next": 1.8}])
+    print("hotmoney tier:", seats["seats"][0]["tier"])
+    a = analyze("news_capture", {"news": news, "flows": flows, "target": "A"})
+    print("analyze(news_capture) called:", a["models_called"])
     a = analyze("deep_dive", {"stocks": stocks, "bars": bars,
                               "holdings": [{"code": "A", "sector": "半导体", "weight": 0.3},
                                            {"code": "B", "sector": "传媒", "weight": 0.2}]})

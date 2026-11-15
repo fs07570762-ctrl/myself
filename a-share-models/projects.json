@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-11-15T20:45:00+08:00",
-  "note": "pinned_sha 由 git ls-remote <url> HEAD 抓取，submodule 固定在该 commit；如需升级，运行 python bootstrap.py --update。star/size 为 2026-11-15 GitHub API 瞬时值。",
-  "compliance_note": "本仓库不复制任何上游源码，只通过 git submodule 记录 commit 引用。TradingAgents-CN 的应用层为专有 source-available 许可，默认不自动初始化，需显式确认。",
+  "generated_at": "2026-11-16T08:00:00+08:00",
+  "note": "pinned_sha 由 git ls-remote <url> HEAD 抓取，submodule 固定在该 commit；如需升级，运行 python bootstrap.py --update。star/size 为 GitHub API 瞬时值（前四项 2026-11-15，后四项 2026-11-16）。",
+  "compliance_note": "本仓库不复制任何上游源码，只通过 git submodule 记录 commit 引用。TradingAgents-CN 的应用层为专有 source-available 许可，默认不自动初始化，需显式确认。aiagents-stock 无开源许可证（默认版权），仅复用方法论，禁止复制/再分发其代码，且其问财 cookie / Playwright 绕指纹数据通道在本体系中禁用。",
   "projects": [
     {
       "id": "dsa_decision_dashboard",
@@ -66,6 +66,68 @@
       "auto_init": true,
       "model": "32 类技术指标、61 种 K 线形态、筹码分布 CYQ、11 个策略模板、选股回测",
       "deploy_blockers": ["需 MySQL/MariaDB、TA-Lib C 库、Python 3.11", "东方财富 Cookie 需定期更新", "爬虫接口可能已失效"]
+    },
+    {
+      "id": "cnequity_moneyflow",
+      "repo": "rootSunc/CNEquity",
+      "url": "https://github.com/rootSunc/CNEquity.git",
+      "path": "vendors/CNEquity",
+      "branch": "main",
+      "pinned_sha": "05370ab722acaaf1cf4cebc8b4489aaa81d5083b",
+      "license": "Apache-2.0",
+      "stars": 1038,
+      "size_kb": 60432,
+      "pushed_at": "2026-11-13T21:03:53Z",
+      "auto_init": true,
+      "model": "86 个日更数据集：L4 资金面（北向/两融/龙虎榜/大宗/资金流向）+ L7 舆情 + L2 公告索引；MCP 原生",
+      "deploy_blockers": ["MCP 部署需 Node 环境与日更任务", "数据落地约 60MB/日"]
+    },
+    {
+      "id": "tradingagents_astock_sentiment",
+      "repo": "simonlin1212/TradingAgents-astock",
+      "url": "https://github.com/simonlin1212/TradingAgents-astock.git",
+      "path": "vendors/TradingAgents-astock",
+      "branch": "main",
+      "pinned_sha": "3a9171182304e87042743dde245c64922e04ed96",
+      "license": "Apache-2.0",
+      "stars": 3986,
+      "size_kb": 4183,
+      "pushed_at": "2026-10-30T23:03:45Z",
+      "auto_init": true,
+      "model": "A 股特化多智能体：游资追踪师/政策分析师/解禁监控师；财联社快讯+百度股市通资金流全免费直连",
+      "deploy_blockers": ["需 LLM API Key", "东财/财联社接口限流需节流"]
+    },
+    {
+      "id": "aiagents_stock_news",
+      "repo": "oficcejo/aiagents-stock",
+      "url": "https://github.com/oficcejo/aiagents-stock.git",
+      "path": "vendors/aiagents-stock",
+      "branch": "main",
+      "pinned_sha": "f31c44ddbe184ad4051d43e9f4a6c5d289431cff",
+      "license": "NO LICENSE (仅复用方法论)",
+      "stars": 2089,
+      "size_kb": 8798,
+      "pushed_at": "2026-10-10T10:42:49Z",
+      "auto_init": false,
+      "requires_confirmation": true,
+      "license_warning": "无开源许可证，默认版权保护：仅允许学习方法论，禁止复制/再分发其代码。其问财 cookie / Playwright 绕指纹通道在本体系禁用。",
+      "model": "20 平台新闻流量监测三层漏斗 + 智瞰龙虎（龙虎榜×5 AI 分析师）+ 主力选股",
+      "deploy_blockers": ["无许可证不可复制代码", "灰色数据通道禁用", "输出边界宽松，须叠加本体系合规护栏"]
+    },
+    {
+      "id": "fingpt_sentiment",
+      "repo": "AI4Finance-Foundation/FinGPT",
+      "url": "https://github.com/AI4Finance-Foundation/FinGPT.git",
+      "path": "vendors/FinGPT",
+      "branch": "master",
+      "pinned_sha": "ac5c5443fbeeafad801e7a3c188e4f24cfaad4d8",
+      "license": "MIT",
+      "stars": 21578,
+      "size_kb": 13196,
+      "pushed_at": "2026-10-25T13:49:15Z",
+      "auto_init": true,
+      "model": "金融新闻情绪分析管道（V1 中文市场微调，v3.3 F1 0.882）；本机仅用规则版方法论等价实现",
+      "deploy_blockers": ["原生模型需 GPU（本机无独显）", "LoRA 微调需训练数据"]
     }
   ]
 }
