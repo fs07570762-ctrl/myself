@@ -44,6 +44,10 @@ python a-share-models/bootstrap.py --status
 python a-share-models/bootstrap.py            # 只拉 3 个宽松许可项目（浅克隆）
 python a-share-models/bootstrap.py --all --accept-proprietary-license  # 含专有许可项
 
+#    若运行环境不允许 Python 启动 git 子进程，bootstrap.py 会自动降级为
+#    打印可复制的命令；也可用 --commands 直接输出命令清单。
+python a-share-models/bootstrap.py --commands
+
 # 2. 安装调用层到 WorkBuddy（此后股票分析任务自动加载技能）
 python a-share-models/install.py
 python a-share-models/install.py --check      # 验证安装

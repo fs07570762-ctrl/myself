@@ -114,7 +114,7 @@ result = analyze("sector_pick", {
 
 `models.py` 是**零第三方依赖**的方法论等价实现，因此「自动调用模型」在安装后即可工作，**不需要**先拉取四个上游源码。
 
-若要运行上游原生模型：`python bootstrap.py`（3 个宽松许可项目）或 `--all --accept-proprietary-license`（含专有许可项），再逐项解决 `projects.json → deploy_blockers`。建议顺序：先接数据层 → qlib 因子与回测 → 最后才是需要 LLM Key / MongoDB 的多智能体系统。**升级前务必核对授权条款。**
+若要运行上游原生模型：在**仓库根目录**执行 `python a-share-models/bootstrap.py`（3 个宽松许可项目）或 `python a-share-models/bootstrap.py --all --accept-proprietary-license`（含专有许可项），再逐项解决 `projects.json → deploy_blockers`。建议顺序：先接数据层 → qlib 因子与回测 → 最后才是需要 LLM Key / MongoDB 的多智能体系统。**升级前务必核对授权条款。**
 
 ## 7. 边界
 
